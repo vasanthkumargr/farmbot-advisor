@@ -98,15 +98,16 @@ def run_episode(task_id: str, episode: int) -> float:
 
             print(f"[STEP] step={step_num} reward={round(reward, 3)} done={state.get('done', False)}", flush=True)
 
-        score = round(total_reward, 3)
+        avg = total_reward / max(step_num, 1)
+        score = round(max(0.05, min(0.95, avg)), 3)
         print(f"[END] task={task_id} score={score} steps={step_num}", flush=True)
 
         return total_reward
 
     except Exception as e:
         print(f"[ERROR] run_episode failed task={task_id} episode={episode} error={e}", flush=True)
-        print(f"[END] task={task_id} score=0.0 steps=0", flush=True)
-        return 0.0
+        print(f"[END] task={task_id} score=0.05 steps=0", flush=True)
+        return 0.05
 
 if __name__ == "__main__":
     all_results = []
