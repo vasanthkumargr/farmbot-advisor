@@ -2,27 +2,39 @@ name: farmbot-advisor
 version: "1.0.0"
 description: "An RL environment simulating agricultural decision-making for Indian farmers. An AI agent advises on irrigation, fertilization, and harvest timing based on real-world farm conditions."
 author: "BinaryBrains"
+license: "mit"
+tags:
+  - agriculture
+  - real-world
+  - natural-language
+  - india
+  - reinforcement-learning
 
 tasks:
   - id: irrigation_decision
     difficulty: easy
     description: "Decide whether to irrigate based on soil moisture and temperature"
     reward_range: [0.0, 1.0]
+    max_steps: 7
 
   - id: fertilizer_recommendation
     difficulty: medium
     description: "Recommend fertilizer type and quantity based on crop stage"
     reward_range: [0.0, 1.0]
+    max_steps: 7
 
   - id: harvest_timing
     difficulty: hard
     description: "Decide optimal harvest window based on crop maturity and market price"
     reward_range: [0.0, 1.0]
+    max_steps: 7
 
 api:
+  base_url: "https://Metsuu13-farmbot-advisor.hf.space"
   reset: POST /reset
   step: POST /step
   state: GET /state
+  tasks: GET /tasks
 
 observation_space:
   soil_moisture: "float [0.0, 1.0]"
@@ -38,4 +50,18 @@ action_space:
     - "Irrigate the field now"
     - "No irrigation needed today"
     - "Apply nitrogen fertilizer at 50kg/acre"
+    - "Apply phosphorus fertilizer at 30kg/acre"
+    - "Apply potassium fertilizer at 40kg/acre"
+    - "Harvest the crop today"
     - "Wait 7 more days before harvest"
+
+reward:
+  type: "scalar"
+  range: [0.0, 1.0]
+  partial_credit: true
+  description: "Partial credit awarded for partially correct decisions at every step"
+
+runtime:
+  max_episode_steps: 7
+  inference_timeout_minutes: 20
+  hardware: "cpu"
