@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import requests
 from openai import OpenAI
@@ -29,7 +30,7 @@ def reset_env(task_id: str) -> dict:
         )
         return response.json()
     except Exception as e:
-        print(json.dumps({"type": "[ERROR]", "stage": "reset", "error": str(e)}))
+        print(f"[ERROR] reset failed: {e}", flush=True)
         return {"task_id": task_id, "step": 0, "soil_moisture": 0.5,
                 "temperature": 30.0, "crop_stage": "vegetative",
                 "days_since_planting": 50, "weather_forecast": [10]*7,
@@ -44,11 +45,8 @@ def step_env(task_id: str, action: str) -> dict:
         )
         return response.json()
     except Exception as e:
-        print(json.dumps({"type": "[ERROR]", "stage": "step", "error": str(e)}))
-        return {"task_id": task_id, "step": 99, "soil_moisture": 0.5,
-                "temperature": 30.0, "crop_stage": "vegetative",
-                "days_since_planting": 50, "weather_forecast": [10]*7,
-                "market_price": 40.0, "done": True, "reward": 0.0}
+        print(f"[ERROR] step failed: {e}", flush=True)
+        return {"task_id": task_id, "step": 99, "done": True, "reward": 0.0}
 
 def get_action(task_id: str, state: dict) -> str:
     try:
@@ -63,7 +61,7 @@ Current farm conditions:
 - 7-day rainfall forecast (mm): {state['weather_forecast']}
 - Market price: Rs {state['market_price']} per kg
 
-Provide a specific farming recommendation with quantities where relevant. Be concise.
+Provide a specific farming recommendation. Be concise.
 For irrigation_decision: say either "Irrigate the field now" or "No irrigation needed today"
 For fertilizer_recommendation: say which fertilizer and how much per acre
 For harvest_timing: say either "Harvest the crop today" or "Wait X more days before harvest"
@@ -75,8 +73,7 @@ For harvest_timing: say either "Harvest the crop today" or "Wait X more days bef
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        print(json.dumps({"type": "[ERROR]", "stage": "get_action", "error": str(e)}))
-        # Fallback actions if LLM fails
+        print(f"[ERROR] get_action failed: {e}", flush=True)
         fallbacks = {
             "irrigation_decision": "Irrigate the field now",
             "fertilizer_recommendation": "Apply nitrogen fertilizer at 50kg/acre",
@@ -88,18 +85,7 @@ def run_episode(task_id: str, episode: int) -> float:
     try:
         state = reset_env(task_id)
 
-        print(json.dumps({
-            "type": "[START]",
-            "task_id": task_id,
-            "episode": episode,
-            "initial_state": {
-                "soil_moisture": state["soil_moisture"],
-                "temperature": state["temperature"],
-                "crop_stage": state["crop_stage"],
-                "days_since_planting": state["days_since_planting"],
-                "market_price": state["market_price"]
-            }
-        }))
+        print(f"[START] task={task_id} episode={episode}", flush=True)
 
         total_reward = 0.0
         step_num = 0
@@ -107,32 +93,20 @@ def run_episode(task_id: str, episode: int) -> float:
         while not state.get("done", False):
             action = get_action(task_id, state)
             state = step_env(task_id, action)
-            reward = state.get("reward", 0.0)
+            reward = float(state.get("reward", 0.0))
             total_reward += reward
             step_num += 1
 
-            print(json.dumps({
-                "type": "[STEP]",
-                "task_id": task_id,
-                "episode": episode,
-                "step": step_num,
-                "action": action[:150],
-                "reward": reward,
-                "done": state.get("done", False)
-            }))
+            print(f"[STEP] task={task_id} episode={episode} step={step_num} reward={reward:.3f} done={state.get('done', False)}", flush=True)
 
-        print(json.dumps({
-            "type": "[END]",
-            "task_id": task_id,
-            "episode": episode,
-            "total_reward": round(total_reward, 3),
-            "steps": step_num
-        }))
+        score = round(total_reward, 3)
+        print(f"[END] task={task_id} episode={episode} score={score} steps={step_num}", flush=True)
 
         return total_reward
 
     except Exception as e:
-        print(json.dumps({"type": "[ERROR]", "task_id": task_id, "episode": episode, "error": str(e)}))
+        print(f"[ERROR] run_episode failed task={task_id} episode={episode} error={e}", flush=True)
+        print(f"[END] task={task_id} episode={episode} score=0.0 steps=0", flush=True)
         return 0.0
 
 if __name__ == "__main__":
@@ -147,9 +121,5 @@ if __name__ == "__main__":
                 "total_reward": round(total_reward, 3)
             })
 
-    print(json.dumps({
-        "type": "[SUMMARY]",
-        "results": all_results,
-        "total_tasks": len(TASKS),
-        "total_episodes": len(all_results)
-    }))
+    print(f"[SUMMARY] total_tasks={len(TASKS)} total_episodes={len(all_results)}", flush=True)
+    sys.stdout.flush()
