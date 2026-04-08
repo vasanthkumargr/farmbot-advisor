@@ -1,6 +1,10 @@
 import random
 from app.models import FarmState
 
+def clamp(score: float) -> float:
+    """Ensure score is strictly between 0 and 1, never exactly 0.0 or 1.0"""
+    return round(max(0.05, min(0.95, score)), 3)
+
 def get_initial_state(task_id: str) -> FarmState:
     return FarmState(
         task_id=task_id,
@@ -12,7 +16,7 @@ def get_initial_state(task_id: str) -> FarmState:
         weather_forecast=[round(random.uniform(0, 30), 2) for _ in range(7)],
         market_price=round(random.uniform(10.0, 80.0), 2),
         done=False,
-        reward=0.0
+        reward=0.5
     )
 
 def evolve_state(state: FarmState) -> FarmState:
@@ -27,18 +31,18 @@ def grade_irrigation(action: str, state: FarmState) -> float:
     action_lower = action.lower()
     if should_irrigate:
         if "irrigate" in action_lower:
-            return 1.0
+            return clamp(0.92)
         elif "no irrigation" in action_lower or "don't irrigate" in action_lower:
-            return 0.0
+            return clamp(0.08)
         else:
-            return 0.4
+            return clamp(0.45)
     else:
         if "no irrigation" in action_lower or "don't irrigate" in action_lower or "wait" in action_lower:
-            return 1.0
+            return clamp(0.92)
         elif "irrigate" in action_lower:
-            return 0.2
+            return clamp(0.15)
         else:
-            return 0.5
+            return clamp(0.5)
 
 def grade_fertilizer(action: str, state: FarmState) -> float:
     score = 0.0
@@ -51,12 +55,16 @@ def grade_fertilizer(action: str, state: FarmState) -> float:
     }
     correct = stage_map.get(state.crop_stage, "nitrogen")
     if correct in action_lower:
-        score += 0.6
+        score += 0.55
     elif any(f in action_lower for f in ["nitrogen", "phosphorus", "potassium"]):
         score += 0.2
+    else:
+        score += 0.05
     if any(q in action_lower for q in ["kg", "grams", "kg/acre", "per acre"]):
-        score += 0.4
-    return min(round(score, 2), 1.0)
+        score += 0.35
+    else:
+        score += 0.05
+    return clamp(score)
 
 def grade_harvest(action: str, state: FarmState) -> float:
     action_lower = action.lower()
@@ -64,22 +72,22 @@ def grade_harvest(action: str, state: FarmState) -> float:
     good_price = state.market_price > 40.0
     if optimal_maturity and good_price:
         if "harvest" in action_lower:
-            return 1.0
+            return clamp(0.92)
         elif "wait" in action_lower:
-            return 0.3
-        return 0.5
+            return clamp(0.3)
+        return clamp(0.5)
     elif optimal_maturity and not good_price:
         if "wait" in action_lower:
-            return 0.8
+            return clamp(0.78)
         elif "harvest" in action_lower:
-            return 0.5
-        return 0.4
+            return clamp(0.45)
+        return clamp(0.4)
     else:
         if "wait" in action_lower:
-            return 1.0
+            return clamp(0.92)
         elif "harvest" in action_lower:
-            return 0.1
-        return 0.4
+            return clamp(0.12)
+        return clamp(0.4)
 
 def compute_reward(task_id: str, action: str, state: FarmState) -> float:
     if task_id == "irrigation_decision":
@@ -88,4 +96,4 @@ def compute_reward(task_id: str, action: str, state: FarmState) -> float:
         return grade_fertilizer(action, state)
     elif task_id == "harvest_timing":
         return grade_harvest(action, state)
-    return 0.0
+    return clamp(0.5)
