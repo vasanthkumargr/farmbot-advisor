@@ -3,11 +3,11 @@ import json
 import requests
 from openai import OpenAI
 
-API_BASE_URL = os.environ["API_BASE_URL"]
-MODEL_NAME = os.environ["MODEL_NAME"]
-HF_TOKEN = os.environ["HF_TOKEN"]
+API_BASE_URL = os.getenv("API_BASE_URL", "https://api-inference.huggingface.co/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "mistralai/Mistral-7B-Instruct-v0.3")
+HF_TOKEN = os.getenv("HF_TOKEN")
 
-BASE_URL = "http://localhost:7860"
+BASE_URL = "https://Metsuu13-farmbot-advisor.hf.space"
 
 client = OpenAI(
     api_key=HF_TOKEN,
@@ -21,14 +21,20 @@ TASKS = [
 ]
 
 def reset_env(task_id: str) -> dict:
-    response = requests.post(f"{BASE_URL}/reset", json={"task_id": task_id})
+    response = requests.post(
+        f"{BASE_URL}/reset",
+        json={"task_id": task_id}
+    )
     return response.json()
 
 def step_env(task_id: str, action: str) -> dict:
-    response = requests.post(f"{BASE_URL}/step", json={
-        "task_id": task_id,
-        "action": {"action": action}
-    })
+    response = requests.post(
+        f"{BASE_URL}/step",
+        json={
+            "task_id": task_id,
+            "action": {"action": action}
+        }
+    )
     return response.json()
 
 def get_action(task_id: str, state: dict) -> str:
@@ -36,14 +42,18 @@ def get_action(task_id: str, state: dict) -> str:
 
 Task: {task_id}
 Current farm conditions:
-- Soil moisture: {state['soil_moisture']:.2f} (0=dry, 1=wet)
-- Temperature: {state['temperature']:.1f}C
+- Soil moisture: {state['soil_moisture']} (0=dry, 1=wet)
+- Temperature: {state['temperature']}C
 - Crop stage: {state['crop_stage']}
 - Days since planting: {state['days_since_planting']}
 - 7-day rainfall forecast (mm): {state['weather_forecast']}
-- Market price: Rs {state['market_price']:.1f} per kg
+- Market price: Rs {state['market_price']} per kg
 
-Provide a specific farming recommendation with quantities where relevant. Be concise.
+Based on these conditions, provide a specific farming recommendation.
+Be concise and mention specific quantities where relevant.
+For irrigation_decision: say either "Irrigate the field now" or "No irrigation needed today"
+For fertilizer_recommendation: say which fertilizer and how much per acre
+For harvest_timing: say either "Harvest the crop today" or "Wait X more days before harvest"
 """
     response = client.chat.completions.create(
         model=MODEL_NAME,
@@ -52,7 +62,7 @@ Provide a specific farming recommendation with quantities where relevant. Be con
     )
     return response.choices[0].message.content.strip()
 
-def run_episode(task_id: str, episode: int):
+def run_episode(task_id: str, episode: int) -> float:
     state = reset_env(task_id)
 
     print(json.dumps({
@@ -62,7 +72,9 @@ def run_episode(task_id: str, episode: int):
         "initial_state": {
             "soil_moisture": state["soil_moisture"],
             "temperature": state["temperature"],
-            "crop_stage": state["crop_stage"]
+            "crop_stage": state["crop_stage"],
+            "days_since_planting": state["days_since_planting"],
+            "market_price": state["market_price"]
         }
     }))
 
@@ -72,7 +84,8 @@ def run_episode(task_id: str, episode: int):
     while not state.get("done", False):
         action = get_action(task_id, state)
         state = step_env(task_id, action)
-        total_reward += state.get("reward", 0.0)
+        reward = state.get("reward", 0.0)
+        total_reward += reward
         step_num += 1
 
         print(json.dumps({
@@ -80,8 +93,8 @@ def run_episode(task_id: str, episode: int):
             "task_id": task_id,
             "episode": episode,
             "step": step_num,
-            "action": action[:100],
-            "reward": state.get("reward", 0.0),
+            "action": action[:150],
+            "reward": reward,
             "done": state.get("done", False)
         }))
 
@@ -96,6 +109,20 @@ def run_episode(task_id: str, episode: int):
     return total_reward
 
 if __name__ == "__main__":
+    all_results = []
+
     for task_id in TASKS:
         for episode in range(1, 3):
-            run_episode(task_id, episode)
+            total_reward = run_episode(task_id, episode)
+            all_results.append({
+                "task_id": task_id,
+                "episode": episode,
+                "total_reward": round(total_reward, 3)
+            })
+
+    print(json.dumps({
+        "type": "[SUMMARY]",
+        "results": all_results,
+        "total_tasks": len(TASKS),
+        "total_episodes": len(all_results)
+    }))
