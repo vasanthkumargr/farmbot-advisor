@@ -1,3 +1,13 @@
+---
+title: Farmbot Advisor
+emoji: 🌾
+colorFrom: green
+colorTo: yellow
+sdk: docker
+pinned: false
+license: mit
+---
+
 # Farmbot Advisor — OpenEnv Environment
 
 An RL environment simulating real-world agricultural decision-making for Indian farmers.
