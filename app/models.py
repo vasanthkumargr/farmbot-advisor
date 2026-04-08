@@ -18,7 +18,7 @@ class FarmAction(BaseModel):
     action: str
 
 class ResetRequest(BaseModel):
-    task_id: str
+    task_id: str = "irrigation_decision"
 
 class StepRequest(BaseModel):
     task_id: str
