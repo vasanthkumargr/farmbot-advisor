@@ -24,8 +24,11 @@ def reset_env(task_id: str) -> dict:
     response = requests.post(f"{BASE_URL}/reset", json={"task_id": task_id})
     return response.json()
 
-def step_env(action: str) -> dict:
-    response = requests.post(f"{BASE_URL}/step", json={"action": {"action": action}})
+def step_env(task_id: str, action: str) -> dict:
+    response = requests.post(f"{BASE_URL}/step", json={
+        "task_id": task_id,
+        "action": {"action": action}
+    })
     return response.json()
 
 def get_action(task_id: str, state: dict) -> str:
@@ -34,14 +37,13 @@ def get_action(task_id: str, state: dict) -> str:
 Task: {task_id}
 Current farm conditions:
 - Soil moisture: {state['soil_moisture']:.2f} (0=dry, 1=wet)
-- Temperature: {state['temperature']:.1f}°C
+- Temperature: {state['temperature']:.1f}C
 - Crop stage: {state['crop_stage']}
 - Days since planting: {state['days_since_planting']}
 - 7-day rainfall forecast (mm): {state['weather_forecast']}
 - Market price: Rs {state['market_price']:.1f} per kg
 
-Based on these conditions, provide a specific farming recommendation.
-Be concise and mention specific quantities where relevant.
+Provide a specific farming recommendation with quantities where relevant. Be concise.
 """
     response = client.chat.completions.create(
         model=MODEL_NAME,
@@ -69,7 +71,7 @@ def run_episode(task_id: str, episode: int):
 
     while not state.get("done", False):
         action = get_action(task_id, state)
-        state = step_env(action)
+        state = step_env(task_id, action)
         total_reward += state.get("reward", 0.0)
         step_num += 1
 
@@ -87,7 +89,7 @@ def run_episode(task_id: str, episode: int):
         "type": "[END]",
         "task_id": task_id,
         "episode": episode,
-        "total_reward": total_reward,
+        "total_reward": round(total_reward, 3),
         "steps": step_num
     }))
 
