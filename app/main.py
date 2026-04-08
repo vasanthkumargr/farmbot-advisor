@@ -1,6 +1,7 @@
 from fastapi import FastAPI
-from app.models import ResetRequest, StepRequest, FarmState
+from app.models import ResetRequest, StepRequest
 from app.environment import get_initial_state, compute_reward, evolve_state
+from typing import Optional
 
 app = FastAPI(title="Farmbot Advisor OpenEnv")
 
@@ -11,9 +12,10 @@ def root():
     return {"status": "ok", "env": "farmbot-advisor"}
 
 @app.post("/reset")
-def reset(req: ResetRequest):
-    state = get_initial_state(req.task_id)
-    sessions[req.task_id] = state
+def reset(req: Optional[ResetRequest] = None):
+    task_id = req.task_id if req else "irrigation_decision"
+    state = get_initial_state(task_id)
+    sessions[task_id] = state
     return state
 
 @app.post("/step")
@@ -33,7 +35,7 @@ def step(req: StepRequest):
     return state
 
 @app.get("/state")
-def get_state(task_id: str):
+def get_state(task_id: str = "irrigation_decision"):
     if task_id not in sessions:
         return {"error": f"No active session for task_id '{task_id}'"}
     return sessions[task_id]
