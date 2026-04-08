@@ -2,14 +2,18 @@
 name = "farmbot-advisor"
 version = "1.0.0"
 description = "OpenEnv RL environment for agricultural decision-making"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "fastapi",
     "uvicorn",
     "pydantic",
     "openai",
-    "requests"
+    "requests",
+    "openenv-core>=0.2.0"
 ]
+
+[project.scripts]
+server = "app.main:app"
 
 [build-system]
 requires = ["setuptools>=61.0"]
