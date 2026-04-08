@@ -1,0 +1,16 @@
+[project]
+name = "farmbot-advisor"
+version = "1.0.0"
+description = "OpenEnv RL environment for agricultural decision-making"
+requires-python = ">=3.9"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "openai",
+    "requests"
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.backends.legacy:build"
