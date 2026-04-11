@@ -100,7 +100,8 @@ For harvest_timing: say "Harvest the crop today" or "Wait X more days before har
         response = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=100,
+            max_tokens=50,
+            timeout=10,
         )
         return response.choices[0].message.content.strip()
     except Exception:
@@ -161,5 +162,5 @@ def run_episode(task_id: str, episode: int) -> float:
 
 if __name__ == "__main__":
     for task_id in TASKS:
-        for episode in range(1, 3):
+        for episode in range(1, 2):  # 1 episode per task — keeps total runtime under 10 min
             run_episode(task_id=task_id, episode=episode)

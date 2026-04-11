@@ -20,7 +20,7 @@ except ImportError:
 
 
 TASKS = ["irrigation_decision", "fertilizer_recommendation", "harvest_timing"]
-MAX_STEPS = 7
+MAX_STEPS = 3
 
 
 class FarmbotEnvironment(Environment):
