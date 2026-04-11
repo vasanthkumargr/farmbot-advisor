@@ -47,6 +47,29 @@ app = create_app(
 )
 
 
+# Root endpoint — required so validator ping to GET / returns 200 (not 404)
+@app.get("/")
+def root():
+    return {
+        "status": "ok",
+        "env": "farmbot-advisor",
+        "tasks": ["irrigation_decision", "fertilizer_recommendation", "harvest_timing"],
+        "endpoints": ["/reset", "/step", "/state", "/health", "/tasks"]
+    }
+
+
+# Tasks listing endpoint
+@app.get("/tasks")
+def list_tasks():
+    return {
+        "tasks": [
+            {"id": "irrigation_decision", "difficulty": "easy"},
+            {"id": "fertilizer_recommendation", "difficulty": "medium"},
+            {"id": "harvest_timing", "difficulty": "hard"},
+        ]
+    }
+
+
 def main(host: str = "0.0.0.0", port: int = 7860):
     """
     Entry point for direct execution via uv run or python -m.
